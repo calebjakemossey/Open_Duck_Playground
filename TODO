@@ -1,0 +1,15 @@
+NEW IDEAS
+
+THIS RUN:
+action scale 1 
+dof vel scale 0.1
+no stand still penalty (transition manually)
+push more frequently
+regenerate reference motion more cleanly (fixed some stuff in sigmaban branch)
+
+
+TO TEST : 
+
+- generate more reference motion
+- kp 
+- not raw imu 
