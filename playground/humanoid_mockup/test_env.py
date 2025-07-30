@@ -55,7 +55,9 @@ while True:
 
     state = step_fn(state, jp.array(action))
 
-    # print(state.data.qpos)
+    print(state.metrics)
+    print(state.reward)
+    print("==")
     data.qpos[:] = state.data.qpos
     mujoco.mj_forward(model, data)
     viewer.sync()

@@ -78,7 +78,6 @@ class MjInfer(MJInferBase):
 
         contacts = self.get_feet_contacts(data)
 
-    
         # AFTER
         gravity = np.array(data.site_xmat[self.get_site_id_from_name("imu")]).reshape(
             (3, 3)

@@ -238,7 +238,7 @@ class Joystick(humanoid_mockup_base.HumanoidMockupEnv):
 
         # multiply actual joints with noise (excluding floating base and backlash)
         qpos_j = self.get_actuator_joints_qpos(qpos) + jax.random.uniform(
-            key, (self._actuators,), minval=0.5, maxval=1.5
+            key, (self._actuators,), minval=-0.1, maxval=0.1
         )
         qpos = self.set_actuator_joints_qpos(qpos_j, qpos)
         # print(f'DEBUG2 joint qpos: {qpos}')
