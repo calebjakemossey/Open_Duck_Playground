@@ -8,6 +8,8 @@ push more frequently
 regenerate reference motion more cleanly (fixed some stuff in sigmaban branch)
 -> not great for now
 
+TO FIX:
+- reset + instead of * and range
 
 TO TEST : 
 
