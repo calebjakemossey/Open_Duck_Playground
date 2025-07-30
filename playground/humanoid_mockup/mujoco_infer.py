@@ -9,7 +9,7 @@ from playground.common.onnx_infer import OnnxInfer
 from playground.common.poly_reference_motion_numpy import PolyReferenceMotion
 from playground.common.utils import LowPassActionFilter
 
-from playground.open_duck_mini_v2.mujoco_infer_base import MJInferBase
+from playground.humanoid_mockup.mujoco_infer_base import MJInferBase
 
 USE_MOTOR_SPEED_LIMITS = True
 
@@ -27,8 +27,8 @@ class MjInfer(MJInferBase):
         self.linearVelocityScale = 1.0
         self.angularVelocityScale = 1.0
         self.dof_pos_scale = 1.0
-        self.dof_vel_scale = 0.05
-        self.action_scale = 0.25
+        self.dof_vel_scale = 1.0
+        self.action_scale = 1.0
 
         self.action_filter = LowPassActionFilter(50, cutoff_frequency=37.5)
 
@@ -249,12 +249,12 @@ if __name__ == "__main__":
     parser.add_argument(
         "--reference_data",
         type=str,
-        default="playground/open_duck_mini_v2/data/polynomial_coefficients.pkl",
+        default="playground/humanoid_mockup/data/polynomial_coefficients.pkl",
     )
     parser.add_argument(
         "--model_path",
         type=str,
-        default="playground/open_duck_mini_v2/xmls/scene_flat_terrain.xml",
+        default="playground/humanoid_mockup/xmls/scene_flat_terrain.xml",
     )
     parser.add_argument("--standing", action="store_true", default=False)
 
