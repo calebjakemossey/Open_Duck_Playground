@@ -52,8 +52,8 @@ def default_config() -> config_dict.ConfigDict:
         sim_dt=0.002,
         episode_length=1000,
         action_repeat=1,
-        action_scale=0.25,
-        dof_vel_scale=0.05,
+        action_scale=1.0,
+        dof_vel_scale=0.1,  # was 0.05
         history_len=0,
         soft_joint_pos_limit_factor=0.95,
         max_motor_velocity=5.24,  # rad/s
@@ -78,9 +78,9 @@ def default_config() -> config_dict.ConfigDict:
             scales=config_dict.create(
                 tracking_lin_vel=2.5,
                 tracking_ang_vel=6.0,
-                torques=-1.0e-3,
-                action_rate=-0.5,  # was -1.5
-                stand_still=-0.2,  # was -1.0 TODO try to relax this a bit ?
+                torques=-1.0e-2,
+                action_rate=-0.75,  # was -1.5
+                stand_still=0.0,  # was -1.0 TODO try to relax this a bit ?
                 alive=20.0,
                 imitation=1.0,
             ),
@@ -88,8 +88,8 @@ def default_config() -> config_dict.ConfigDict:
         ),
         push_config=config_dict.create(
             enable=True,
-            interval_range=[5.0, 10.0],
-            magnitude_range=[0.1, 1.0],
+            interval_range=[3.0, 7.0],
+            magnitude_range=[0.3, 1.0],
         ),
         lin_vel_x=[-0.15, 0.15],
         lin_vel_y=[-0.2, 0.2],
