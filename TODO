@@ -9,9 +9,9 @@ push more frequently
 - generate more reference motion
   - increased walk freq a bit, tuned ranges better, com 1cm higher
 
+- increase feet contact sub reward
 
 TO TEST : 
 
 - kp 
-- increase feet contact sub reward
 - try mansin imitation weights again ?
