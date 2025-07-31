@@ -126,8 +126,10 @@ class MjInfer(MJInferBase):
             if keycode == 69:  # e
                 ang_vel = self.COMMANDS_RANGE_THETA[0]
             if keycode == 80:  # p
+                # self.data.qvel[0] = 1.0
                 self.phase_frequency_factor += 0.1
             if keycode == 59:  # m
+                # self.data.qvel[0] = -1.0
                 self.phase_frequency_factor -= 0.1
         else:
             neck_pitch = 0

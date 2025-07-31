@@ -28,11 +28,6 @@ def reward_imitation(
     w_contact = 3.0
 
     #  TODO : double check if the slices are correct
-    linear_vel_slice_start = 34
-    linear_vel_slice_end = 37
-
-    angular_vel_slice_start = 37
-    angular_vel_slice_end = 40
 
     joint_pos_slice_start = 0
     joint_pos_slice_end = 16
@@ -40,9 +35,16 @@ def reward_imitation(
     joint_vels_slice_start = 16
     joint_vels_slice_end = 32
 
-    # root_pos_slice_start = 0
-    # root_pos_slice_end = 3
+    foot_contacts_slice_start = 32
+    foot_contacts_slice_end = 34
+    
+    linear_vel_slice_start = 34
+    linear_vel_slice_end = 37
 
+    angular_vel_slice_start = 37
+    angular_vel_slice_end = 40
+
+    # not used
     root_quat_slice_start = 3
     root_quat_slice_end = 7
 
@@ -52,8 +54,6 @@ def reward_imitation(
     # right_toe_pos_slice_start = 26
     # right_toe_pos_slice_end = 29
 
-    foot_contacts_slice_start = 32
-    foot_contacts_slice_end = 34
 
     # ref_base_pos = reference_frame[root_pos_slice_start:root_pos_slice_end]
     # base_pos = qpos[:3]
