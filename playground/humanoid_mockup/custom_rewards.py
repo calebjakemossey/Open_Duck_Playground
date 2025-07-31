@@ -28,11 +28,10 @@ def reward_imitation(
     w_contact = 1.0
 
     #  TODO : double check if the slices are correct
-    linear_vel_slice_start = 22
-    linear_vel_slice_end = 25
 
-    angular_vel_slice_start = 25
-    angular_vel_slice_end = 28
+    # not used
+    root_quat_slice_start = 3
+    root_quat_slice_end = 7
 
     joint_pos_slice_start = 0
     joint_pos_slice_end = 10
@@ -43,9 +42,12 @@ def reward_imitation(
     foot_contacts_slice_start = 20
     foot_contacts_slice_end = 22
 
-    # not used
-    root_quat_slice_start = 3
-    root_quat_slice_end = 7
+    linear_vel_slice_start = 22
+    linear_vel_slice_end = 25
+
+    angular_vel_slice_start = 25
+    angular_vel_slice_end = 28
+    
 
 
     # ref_base_pos = reference_frame[root_pos_slice_start:root_pos_slice_end]
@@ -132,5 +134,5 @@ def reward_imitation(
         # + torso_orientation_rew
     )
 
-    reward *= cmd_norm > 0.01  # No reward for zero commands.
+    # reward *= cmd_norm > 0.01  # No reward for zero commands.
     return jp.nan_to_num(reward)

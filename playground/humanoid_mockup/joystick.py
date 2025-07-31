@@ -685,7 +685,7 @@ class Joystick(humanoid_mockup_base.HumanoidMockupEnv):
 
         # With 10% chance, set everything to zero.
         return jp.where(
-            jax.random.bernoulli(rng4, p=0.1),
+            jax.random.bernoulli(rng4, p=0.0),
             jp.zeros(3),
             jp.hstack(
                 [
