@@ -37,9 +37,9 @@ class MjInfer(MJInferBase):
 
         self.policy = OnnxInfer(onnx_model_path, awd=True)
 
-        self.COMMANDS_RANGE_X = [-0.3, 0.4]
-        self.COMMANDS_RANGE_Y = [-0.3, 0.3]
-        self.COMMANDS_RANGE_THETA = [-1.5, 1.5]  # [-1.0, 1.0]
+        self.COMMANDS_RANGE_X = [-0.3, 0.3]
+        self.COMMANDS_RANGE_Y = [-0.2, 0.2]
+        self.COMMANDS_RANGE_THETA = [-1.0, 1.0]  # [-1.0, 1.0]
 
         self.NECK_PITCH_RANGE = [-0.34, 1.1]
         self.HEAD_PITCH_RANGE = [-0.78, 0.78]

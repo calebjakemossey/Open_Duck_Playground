@@ -15,7 +15,7 @@ from playground.common.poly_reference_motion_numpy import PolyReferenceMotion
 SCRIPT_PATH = os.path.dirname(os.path.abspath(__file__))
 SCENE_PATH = f"{SCRIPT_PATH}/xmls"
 
-COMMANDS_RANGE_X = [-0.15, 0.15]
+COMMANDS_RANGE_X = [-0.3, 0.3]
 COMMANDS_RANGE_Y = [-0.2, 0.2]
 COMMANDS_RANGE_THETA = [-1.0, 1.0]  # [-1.0, 1.0]
 

@@ -260,7 +260,24 @@ class MJInferBase:
             self.gravity_id : self.gravity_id + self.gravity_dimensions
         ]
 
-    def check_contact(self, data, body1_name, body2_name):
+    def check_geom_contact(self, data, geom1_name, geom2_name):
+        geom1_id = data.geom(geom1_name).id
+        geom2_id = data.geom(geom2_name).id
+
+        for i in range(data.ncon):
+            try:
+                contact = data.contact[i]
+            except Exception as e:
+                return False
+
+            if (
+                contact.geom1 == geom1_id and contact.geom2 == geom2_id
+            ) or (contact.geom1 == geom2_id and contact.geom2 == geom1_id):
+                return True
+
+        return False
+
+    def check_body_contact(self, data, body1_name, body2_name):
         body1_id = data.body(body1_name).id
         body2_id = data.body(body2_name).id
 
@@ -282,6 +299,10 @@ class MJInferBase:
         return False
 
     def get_feet_contacts(self, data):
-        left_contact = self.check_contact(data, "left_foot_2", "floor")
-        right_contact = self.check_contact(data, "right_foot_2", "floor")
+        # left_contact = self.check_body_contact(data, "left_foot_2", "floor")
+        # right_contact = self.check_body_contact(data, "right_foot_2", "floor")
+
+        left_contact = self.check_geom_contact(data, "left_foot_contact", "floor")
+        right_contact = self.check_geom_contact(data, "right_foot_contact", "floor")
+
         return left_contact, right_contact
