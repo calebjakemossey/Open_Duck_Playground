@@ -15,13 +15,8 @@ USE_MOTOR_SPEED_LIMITS = False
 
 
 class MjInfer(MJInferBase):
-    def __init__(
-        self, model_path: str, reference_data: str, onnx_model_path: str, standing: bool
-    ):
+    def __init__(self, model_path: str, reference_data: str, onnx_model_path: str):
         super().__init__(model_path)
-
-        self.standing = standing
-        self.head_control_mode = self.standing
 
         # Params
         self.linearVelocityScale = 1.0
@@ -32,8 +27,7 @@ class MjInfer(MJInferBase):
 
         self.action_filter = LowPassActionFilter(50, cutoff_frequency=37.5)
 
-        if not self.standing:
-            self.PRM = PolyReferenceMotion(reference_data)
+        self.PRM = PolyReferenceMotion(reference_data)
 
         self.policy = OnnxInfer(onnx_model_path, awd=True)
 
@@ -49,13 +43,19 @@ class MjInfer(MJInferBase):
         self.imitation_i = 0
         self.imitation_phase = np.array([0, 0])
         self.saved_obs = []
+        self.torques = []
 
         self.max_motor_velocity = 5.24  # rad/s
 
         self.phase_frequency_factor = 1.0
 
-        self.left_knee_id = mujoco.mj_name2id(self.model, mujoco.mjtObj.mjOBJ_ACTUATOR, "left_knee") + 6
-        self.right_knee_id = mujoco.mj_name2id(self.model, mujoco.mjtObj.mjOBJ_ACTUATOR, "right_knee") + 6
+        self.left_knee_id = (
+            mujoco.mj_name2id(self.model, mujoco.mjtObj.mjOBJ_ACTUATOR, "left_knee") + 6
+        )
+        self.right_knee_id = (
+            mujoco.mj_name2id(self.model, mujoco.mjtObj.mjOBJ_ACTUATOR, "right_knee")
+            + 6
+        )
 
         print(f"joint names: {self.joint_names}")
         print(f"actuator names: {self.actuator_names}")
@@ -81,14 +81,10 @@ class MjInfer(MJInferBase):
             (3, 3)
         ).T @ np.array([0, 0, -1])
 
-        # if not self.standing:
-        # ref = self.PRM.get_reference_motion(*command[:3], self.imitation_i)
-
         obs = np.concatenate(
             [
                 gyro,
                 gravity,
-                # accelerometer,
                 command,
                 joint_angles - self.default_actuator,
                 joint_vel * self.dof_vel_scale,
@@ -97,8 +93,6 @@ class MjInfer(MJInferBase):
                 self.last_last_last_action,
                 self.motor_targets,
                 contacts,
-                # ref if not self.standing else np.array([]),
-                # [self.imitation_i]
                 self.imitation_phase,
             ]
         )
@@ -107,30 +101,27 @@ class MjInfer(MJInferBase):
 
     def key_callback(self, keycode):
         print(f"key: {keycode}")
-        if keycode == 72:  # h
-            self.head_control_mode = not self.head_control_mode
         lin_vel_x = 0
         lin_vel_y = 0
         ang_vel = 0
-        if not self.head_control_mode:
-            if keycode == 265:  # arrow up
-                lin_vel_x = self.COMMANDS_RANGE_X[1]
-            if keycode == 264:  # arrow down
-                lin_vel_x = self.COMMANDS_RANGE_X[0]
-            if keycode == 263:  # arrow left
-                lin_vel_y = self.COMMANDS_RANGE_Y[1]
-            if keycode == 262:  # arrow right
-                lin_vel_y = self.COMMANDS_RANGE_Y[0]
-            if keycode == 81:  # a
-                ang_vel = self.COMMANDS_RANGE_THETA[1]
-            if keycode == 69:  # e
-                ang_vel = self.COMMANDS_RANGE_THETA[0]
-            if keycode == 80:  # p
-                self.data.qvel[0] = 1.0
-                # self.phase_frequency_factor += 0.1
-            if keycode == 59:  # m
-                self.data.qvel[0] = -1.0
-                # self.phase_frequency_factor -= 0.1
+        if keycode == 265:  # arrow up
+            lin_vel_x = self.COMMANDS_RANGE_X[1]
+        if keycode == 264:  # arrow down
+            lin_vel_x = self.COMMANDS_RANGE_X[0]
+        if keycode == 263:  # arrow left
+            lin_vel_y = self.COMMANDS_RANGE_Y[1]
+        if keycode == 262:  # arrow right
+            lin_vel_y = self.COMMANDS_RANGE_Y[0]
+        if keycode == 81:  # a
+            ang_vel = self.COMMANDS_RANGE_THETA[1]
+        if keycode == 69:  # e
+            ang_vel = self.COMMANDS_RANGE_THETA[0]
+        if keycode == 80:  # p
+            self.data.qvel[0] = 1.0
+            # self.phase_frequency_factor += 0.1
+        if keycode == 59:  # m
+            self.data.qvel[0] = -1.0
+            # self.phase_frequency_factor -= 0.1
 
         self.commands[0] = lin_vel_x
         self.commands[1] = lin_vel_y
@@ -147,43 +138,50 @@ class MjInfer(MJInferBase):
             ) as viewer:
                 counter = 0
                 while True:
-
                     step_start = time.time()
 
                     mujoco.mj_step(self.model, self.data)
 
-                    left_knee_torque = self.data.qfrc_actuator[self.left_knee_id]
-                    right_knee_torque = self.data.qfrc_actuator[self.right_knee_id]
-                    print(
-                        f"Left knee torque: {np.around(left_knee_torque, 2)}, Right knee torque: {np.around(right_knee_torque, 2)}"
-                    )
-
                     counter += 1
 
                     if counter % self.decimation == 0:
-                        if not self.standing:
-                            self.imitation_i += 1.0 * self.phase_frequency_factor
-                            self.imitation_i = (
-                                self.imitation_i % self.PRM.nb_steps_in_period
-                            )
-                            # print(self.PRM.nb_steps_in_period)
-                            # exit()
-                            self.imitation_phase = np.array(
+                        left_knee_torque = self.data.qfrc_actuator[self.left_knee_id]
+                        right_knee_torque = self.data.qfrc_actuator[self.right_knee_id]
+                        print(
+                            f"Left knee torque: {np.around(left_knee_torque, 2)}, Right knee torque: {np.around(right_knee_torque, 2)}"
+                        )
+
+                        self.torques.append(
+                            np.array(
                                 [
-                                    np.cos(
-                                        self.imitation_i
-                                        / self.PRM.nb_steps_in_period
-                                        * 2
-                                        * np.pi
-                                    ),
-                                    np.sin(
-                                        self.imitation_i
-                                        / self.PRM.nb_steps_in_period
-                                        * 2
-                                        * np.pi
-                                    ),
+                                    left_knee_torque,
+                                    right_knee_torque,
                                 ]
                             )
+                        )
+
+                        self.imitation_i += 1.0 * self.phase_frequency_factor
+                        self.imitation_i = (
+                            self.imitation_i % self.PRM.nb_steps_in_period
+                        )
+                        # print(self.PRM.nb_steps_in_period)
+                        # exit()
+                        self.imitation_phase = np.array(
+                            [
+                                np.cos(
+                                    self.imitation_i
+                                    / self.PRM.nb_steps_in_period
+                                    * 2
+                                    * np.pi
+                                ),
+                                np.sin(
+                                    self.imitation_i
+                                    / self.PRM.nb_steps_in_period
+                                    * 2
+                                    * np.pi
+                                ),
+                            ]
+                        )
                         obs = self.get_obs(
                             self.data,
                             self.commands,
@@ -229,10 +227,10 @@ class MjInfer(MJInferBase):
                         time.sleep(time_until_next_step)
         except KeyboardInterrupt:
             pickle.dump(self.saved_obs, open("mujoco_saved_obs.pkl", "wb"))
+            pickle.dump(self.torques, open("mujoco_torques.pkl", "wb"))
 
 
 if __name__ == "__main__":
-
     parser = argparse.ArgumentParser()
     parser.add_argument("-o", "--onnx_model_path", type=str, required=True)
     # parser.add_argument("-k", action="store_true", default=False)
@@ -246,11 +244,8 @@ if __name__ == "__main__":
         type=str,
         default="playground/humanoid_mockup/xmls/scene_flat_terrain.xml",
     )
-    parser.add_argument("--standing", action="store_true", default=False)
 
     args = parser.parse_args()
 
-    mjinfer = MjInfer(
-        args.model_path, args.reference_data, args.onnx_model_path, args.standing
-    )
+    mjinfer = MjInfer(args.model_path, args.reference_data, args.onnx_model_path)
     mjinfer.run()
