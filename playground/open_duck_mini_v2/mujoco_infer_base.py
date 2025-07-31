@@ -256,6 +256,10 @@ class MJInferBase:
             self.gravity_id : self.gravity_id + self.gravity_dimensions
         ]
 
+    def get_site_id_from_name(self, name: str) -> int:
+        """Return the id of a specified site"""
+        return mujoco.mj_name2id(self.model, mujoco.mjtObj.mjOBJ_SITE, name)
+
     def check_contact(self, data, body1_name, body2_name):
         body1_id = data.body(body1_name).id
         body2_id = data.body(body2_name).id

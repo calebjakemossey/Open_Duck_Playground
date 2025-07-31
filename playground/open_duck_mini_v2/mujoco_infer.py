@@ -71,7 +71,10 @@ class MjInfer(MJInferBase):
     ):
         gyro = self.get_gyro(data)
         accelerometer = self.get_accelerometer(data)
-        accelerometer[0] += 1.3
+
+        gravity = np.array(data.site_xmat[self.get_site_id_from_name("imu")]).reshape(
+            (3, 3)
+        ).T @ np.array([0, 0, -1])
 
         joint_angles = self.get_actuator_joints_qpos(data.qpos)
         joint_vel = self.get_actuator_joints_qvel(data.qvel)
@@ -84,8 +87,8 @@ class MjInfer(MJInferBase):
         obs = np.concatenate(
             [
                 gyro,
-                accelerometer,
-                # gravity,
+                # accelerometer,
+                gravity,
                 command,
                 joint_angles - self.default_actuator,
                 joint_vel * self.dof_vel_scale,

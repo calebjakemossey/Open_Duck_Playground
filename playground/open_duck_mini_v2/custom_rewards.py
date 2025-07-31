@@ -25,7 +25,7 @@ def reward_imitation(
     w_ang_vel_z = 0.5
     w_joint_pos = 15.0
     w_joint_vel = 1.0e-3
-    w_contact = 1.0
+    w_contact = 3.0
 
     #  TODO : double check if the slices are correct
     linear_vel_slice_start = 34
@@ -145,5 +145,5 @@ def reward_imitation(
         # + torso_orientation_rew
     )
 
-    reward *= cmd_norm > 0.01  # No reward for zero commands.
+    # reward *= cmd_norm > 0.01  # No reward for zero commands.
     return jp.nan_to_num(reward)

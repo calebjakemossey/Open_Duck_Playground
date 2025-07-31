@@ -237,8 +237,8 @@ class Joystick(open_duck_mini_v2_base.OpenDuckMiniV2Env):
         rng, key = jax.random.split(rng)
 
         # multiply actual joints with noise (excluding floating base and backlash)
-        qpos_j = self.get_actuator_joints_qpos(qpos) * jax.random.uniform(
-            key, (self._actuators,), minval=0.5, maxval=1.5
+        qpos_j = self.get_actuator_joints_qpos(qpos) + jax.random.uniform(
+            key, (self._actuators,), minval=-0.1, maxval=0.1
         )
         qpos = self.set_actuator_joints_qpos(qpos_j, qpos)
         # print(f'DEBUG2 joint qpos: {qpos}')
@@ -498,8 +498,6 @@ class Joystick(open_duck_mini_v2_base.OpenDuckMiniV2Env):
         )
 
         accelerometer = self.get_accelerometer(data)
-        # accelerometer[0] += 1.3 # TODO testing
-        accelerometer.at[0].set(accelerometer[0] + 1.3)
 
         info["rng"], noise_rng = jax.random.split(info["rng"])
         noisy_accelerometer = (
@@ -570,10 +568,10 @@ class Joystick(open_duck_mini_v2_base.OpenDuckMiniV2Env):
         state = jp.hstack(
             [
                 # noisy_linvel,  # 3
-                # noisy_gyro,  # 3
-                # noisy_gravity,  # 3
                 noisy_gyro,  # 3
-                noisy_accelerometer,  # 3
+                noisy_gravity,  # 3
+                # noisy_gyro,  # 3
+                # noisy_accelerometer,  # 3
                 info["command"],  # 3
                 noisy_joint_angles - self._default_actuator,  # 10
                 noisy_joint_vel * self._config.dof_vel_scale,  # 10
