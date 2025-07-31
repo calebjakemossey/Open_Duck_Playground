@@ -22,3 +22,7 @@ TO TEST :
 
 - kp 
 - try mansin imitation weights again ?
+
+NOTES:
+- I can get away with not letting the policy control the head, but it tends to pitch the trunk down front in this case
+Not sure how this will all transfer on the real robot, I can try with 0.5 action scale too, and maybe go back to 0.25 to see ?
