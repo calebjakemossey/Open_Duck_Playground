@@ -56,6 +56,14 @@ class MjInfer(MJInferBase):
             mujoco.mj_name2id(self.model, mujoco.mjtObj.mjOBJ_ACTUATOR, "right_knee")
             + 6
         )
+        self.left_ankle_pitch_id = (
+            mujoco.mj_name2id(self.model, mujoco.mjtObj.mjOBJ_ACTUATOR, "left_ankle_pitch")
+            + 6
+        )
+        self.right_ankle_pitch_id = (
+            mujoco.mj_name2id(self.model, mujoco.mjtObj.mjOBJ_ACTUATOR, "right_ankle_pitch")
+            + 6
+        )
 
         print(f"joint names: {self.joint_names}")
         print(f"actuator names: {self.actuator_names}")
@@ -147,8 +155,11 @@ class MjInfer(MJInferBase):
                     if counter % self.decimation == 0:
                         left_knee_torque = self.data.qfrc_actuator[self.left_knee_id]
                         right_knee_torque = self.data.qfrc_actuator[self.right_knee_id]
+                        left_ankle_pitch_torque = self.data.qfrc_actuator[self.left_ankle_pitch_id]
+                        right_ankle_pitch_torque = self.data.qfrc_actuator[self.right_ankle_pitch_id]
                         print(
                             f"Left knee torque: {np.around(left_knee_torque, 2)}, Right knee torque: {np.around(right_knee_torque, 2)}"
+                            f", Left ankle pitch torque: {np.around(left_ankle_pitch_torque, 2)}, Right ankle pitch torque: {np.around(right_ankle_pitch_torque, 2)}"
                         )
 
                         self.torques.append(
@@ -156,6 +167,8 @@ class MjInfer(MJInferBase):
                                 [
                                     left_knee_torque,
                                     right_knee_torque,
+                                    left_ankle_pitch_torque,
+                                    right_ankle_pitch_torque,
                                 ]
                             )
                         )

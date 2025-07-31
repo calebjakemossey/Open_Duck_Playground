@@ -25,8 +25,7 @@
       <!-- need to be identified -->
       <geom contype="0" conaffinity="0"/>
       <joint damping="0.8" frictionloss="0.2" armature="0.01"/>
-      <!-- <position kp="40.0" kv="0.0" forcerange="-11.0 11.0"/> -->
-      <position kp="40.0" kv="0.0" forcerange="-8.0 8.0"/>
+      <position kp="40.0" kv="0.0" forcerange="-11.0 11.0"/>
     </default>
   </default>
   <!-- Additional sensors.xml -->
