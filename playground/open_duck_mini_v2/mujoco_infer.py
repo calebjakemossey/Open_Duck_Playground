@@ -28,7 +28,7 @@ class MjInfer(MJInferBase):
         self.angularVelocityScale = 1.0
         self.dof_pos_scale = 1.0
         self.dof_vel_scale = 0.1
-        self.action_scale = 1.0
+        self.action_scale = 0.25
 
         self.action_filter = LowPassActionFilter(50, cutoff_frequency=37.5)
 
@@ -234,9 +234,9 @@ class MjInfer(MJInferBase):
 
                             self.prev_motor_targets = self.motor_targets.copy()
 
-                        head_targets = self.commands[3:]
-                        # head_targets = [0.2, 0, -0.2, 0]
-                        self.motor_targets[5:9] = head_targets
+                        # head_targets = self.commands[3:]
+                        # head_targets = [0.3, -0.3, 0.0, 0]
+                        # self.motor_targets[5:9] = head_targets
                         self.data.ctrl = self.motor_targets.copy()
 
                     viewer.sync()
