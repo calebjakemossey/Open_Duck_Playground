@@ -27,8 +27,8 @@ class MjInfer(MJInferBase):
         self.linearVelocityScale = 1.0
         self.angularVelocityScale = 1.0
         self.dof_pos_scale = 1.0
-        self.dof_vel_scale = 0.1
-        self.action_scale = 0.35
+        self.dof_vel_scale = 0.05
+        self.action_scale = 0.25
 
         self.action_filter = LowPassActionFilter(50, cutoff_frequency=37.5)
 
@@ -37,9 +37,9 @@ class MjInfer(MJInferBase):
 
         self.policy = OnnxInfer(onnx_model_path, awd=True)
 
-        self.COMMANDS_RANGE_X = [-0.25, 0.3]
+        self.COMMANDS_RANGE_X = [-0.2, 0.25]
         self.COMMANDS_RANGE_Y = [-0.2, 0.2]
-        self.COMMANDS_RANGE_THETA = [-1.5, 1.5]  # [-1.0, 1.0]
+        self.COMMANDS_RANGE_THETA = [-1.0, 1.0]  # [-1.0, 1.0]
 
         self.NECK_PITCH_RANGE = [-0.34, 1.1]
         self.HEAD_PITCH_RANGE = [-0.78, 0.78]
@@ -234,9 +234,9 @@ class MjInfer(MJInferBase):
 
                             self.prev_motor_targets = self.motor_targets.copy()
 
-                        head_targets = self.commands[3:]
+                        # head_targets = self.commands[3:]
                         # head_targets = [0.3, -0.3, 0.0, 0]
-                        self.motor_targets[5:9] = head_targets
+                        # self.motor_targets[5:9] = head_targets
                         self.data.ctrl = self.motor_targets.copy()
 
                     viewer.sync()

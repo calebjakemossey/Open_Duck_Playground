@@ -44,7 +44,7 @@ from playground.open_duck_mini_v2.custom_rewards import reward_imitation
 
 # if set to false, won't require the reference data to be present and won't compute the reference motions polynoms for nothing
 USE_IMITATION_REWARD = True
-USE_MOTOR_SPEED_LIMITS = False
+USE_MOTOR_SPEED_LIMITS = True
 
 
 def default_config() -> config_dict.ConfigDict:
@@ -53,8 +53,8 @@ def default_config() -> config_dict.ConfigDict:
         sim_dt=0.002,
         episode_length=1000,
         action_repeat=1,
-        action_scale=0.35,
-        dof_vel_scale=0.1,
+        action_scale=0.25,
+        dof_vel_scale=0.05,
         history_len=0,
         soft_joint_pos_limit_factor=0.95,
         max_motor_velocity=5.24,  # rad/s
@@ -80,7 +80,7 @@ def default_config() -> config_dict.ConfigDict:
                 tracking_lin_vel=2.5,
                 tracking_ang_vel=6.0,
                 torques=-1.0e-3,
-                action_rate=-0.75,  # was -1.5
+                action_rate=-0.5,  # was -1.5
                 stand_still=0.0,  # was -1.0 TODO try to relax this a bit ?
                 alive=20.0,
                 imitation=1.0,
@@ -93,9 +93,9 @@ def default_config() -> config_dict.ConfigDict:
             interval_range=[3.0, 7.0],
             magnitude_range=[0.3, 1.0],
         ),
-        lin_vel_x=[-0.25, 0.3],
+        lin_vel_x=[-0.2, 0.25],
         lin_vel_y=[-0.2, 0.2],
-        ang_vel_yaw=[-1.5, 1.5],  # [-1.0, 1.0]
+        ang_vel_yaw=[-1, 1],  # [-1.0, 1.0]
         neck_pitch_range=[-0.34, 1.1],
         head_pitch_range=[-0.78, 0.78],
         head_yaw_range=[-1.5, 1.5],
