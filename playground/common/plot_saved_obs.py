@@ -14,22 +14,20 @@ args = parser.parse_args()
 
 init_pos = np.array(
     [
-        0.00000,
-        0.09081,
-        -0.50983,
-        1.13089,
-        -0.62104,
-
+        0.00466,
+        0.08862,
+        -0.56751,
+        1.08359,
+        -0.56863,
         0.05236,
-        -0.05236,
+        -0.05237,
         -0.00000,
         -0.00000,
-
-        -0.00000,
-        -0.09081,
-        0.50983,
-        1.13089,
-        -0.62104 
+        -0.00466,
+        -0.08862,
+        0.56751,
+        1.08359,
+        -0.56863,
     ]
 )
 
@@ -62,7 +60,7 @@ for i in range(num_dofs):
     actions.append([])
     for obs in obses:
         dof_poses[i].append(obs[13 : 13 + num_dofs][i])
-        actions[i].append(obs[26 : 26 + num_dofs][i])
+        actions[i].append(obs[41 : 41 + num_dofs][i])
 
 # plot action vs dof pos
 
@@ -82,6 +80,9 @@ for i in range(nb_rows):
         axs[i, j].set_title(f"{joints_order[i * nb_cols + j]}")
 
 fig.suptitle(f"{args.data}")
+for ax in axs.flat:
+    ax.set_ylim([-1, 1])
+
 plt.show()
 
 obses_names = [
@@ -189,7 +190,7 @@ obses_names = [
     "contact left",
     "contact right",
     "imitation_phase 1",
-    "imitation_phase 2"
+    "imitation_phase 2",
     # ref (ignored)
 ]
 # print(len(obses_names))

@@ -32,9 +32,7 @@ Not sure how this will all transfer on the real robot, I can try with 0.5 action
 - Even with kp 32, action scale 0.25 and dof vel scale 0.05, I can't train a very stable policy on the new branch. 
   - TODO list changes
 
-
-TODO
-redo soft offsets
+- going back to RAW imu seems to improve already ... (early checkpoint)
 
 ## octuple check sim2real ? 
 - Replay a walking move in the air, log and look at the curves, compare with mujoco simulation

@@ -240,7 +240,7 @@ class Joystick(open_duck_mini_v2_base.OpenDuckMiniV2Env):
 
         # multiply actual joints with noise (excluding floating base and backlash)
         qpos_j = self.get_actuator_joints_qpos(qpos) + jax.random.uniform(
-            key, (self._actuators,), minval=-0.1, maxval=0.1
+            key, (self._actuators,), minval=-0.3, maxval=0.3
         )
         qpos = self.set_actuator_joints_qpos(qpos_j, qpos)
         # print(f'DEBUG2 joint qpos: {qpos}')
