@@ -5,6 +5,7 @@ action scale 0.25
 dof vel scale 0.1
 no stand still penalty (transition manually)
 push more frequently
+imu gravity + gyro instead of raw gyro = accelero
 
 - generate more reference motion
   - increased walk freq a bit, tuned ranges better, com 1cm higher
@@ -28,3 +29,10 @@ Not sure how this will all transfer on the real robot, I can try with 0.5 action
 
 - kp 16 seems promising ! Need to fine tune a good policy for this, but it behaves much better than before when reducing the kp !
 - 0.25 makes still the best behaved policies, 0.5 could work, but it shakes a lot right now
+- Even with kp 32, action scale 0.25 and dof vel scale 0.05, I can't train a very stable policy on the new branch. 
+  - TODO list changes
+
+
+TODO
+redo soft offsets
+

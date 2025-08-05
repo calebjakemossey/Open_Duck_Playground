@@ -90,12 +90,12 @@ def default_config() -> config_dict.ConfigDict:
         ),
         push_config=config_dict.create(
             enable=True,
-            interval_range=[3.0, 7.0],
-            magnitude_range=[0.3, 1.0],
+            interval_range=[5.0, 10.0],
+            magnitude_range=[0.1, 1.0],
         ),
-        lin_vel_x=[-0.2, 0.25],
+        lin_vel_x=[-0.15, 0.15],
         lin_vel_y=[-0.2, 0.2],
-        ang_vel_yaw=[-1, 1],  # [-1.0, 1.0]
+        ang_vel_yaw=[-1.0, 1.0],  # [-1.0, 1.0]
         neck_pitch_range=[-0.34, 1.1],
         head_pitch_range=[-0.78, 0.78],
         head_yaw_range=[-1.5, 1.5],
@@ -569,11 +569,8 @@ class Joystick(open_duck_mini_v2_base.OpenDuckMiniV2Env):
 
         state = jp.hstack(
             [
-                # noisy_linvel,  # 3
                 noisy_gyro,  # 3
                 noisy_gravity,  # 3
-                # noisy_gyro,  # 3
-                # noisy_accelerometer,  # 3
                 info["command"],  # 3
                 noisy_joint_angles - self._default_actuator,  # 10
                 noisy_joint_vel * self._config.dof_vel_scale,  # 10
@@ -582,8 +579,6 @@ class Joystick(open_duck_mini_v2_base.OpenDuckMiniV2Env):
                 info["last_last_last_act"],  # 10
                 info["motor_targets"],  # 10
                 contact,  # 2
-                # info["current_reference_motion"],
-                # info["imitation_i"],
                 info["imitation_phase"],
             ]
         )
