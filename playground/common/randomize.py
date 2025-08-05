@@ -48,8 +48,8 @@ def domain_randomize(model: mjx.Model, rng: jax.Array):
         frictionloss = model.dof_frictionloss[dof_addr] * jax.random.uniform(
             key,
             shape=(model.nu,),
-            minval=0.8,
-            maxval=1.3,  # was 0.9, 1.1
+            minval=0.9,
+            maxval=1.1,
         )
         dof_frictionloss = model.dof_frictionloss.at[dof_addr].set(frictionloss)
 
@@ -62,9 +62,7 @@ def domain_randomize(model: mjx.Model, rng: jax.Array):
 
         # Jitter center of mass positiion: +U(-0.05, 0.05).
         rng, key = jax.random.split(rng)
-        dpos = jax.random.uniform(
-            key, (3,), minval=-0.05, maxval=0.05
-        )  # was -0.05, 0.05, maybe too much
+        dpos = jax.random.uniform(key, (3,), minval=-0.05, maxval=0.05)
         body_ipos = model.body_ipos.at[TORSO_BODY_ID].set(
             model.body_ipos[TORSO_BODY_ID] + dpos
         )
@@ -94,8 +92,8 @@ def domain_randomize(model: mjx.Model, rng: jax.Array):
         factor = jax.random.uniform(
             key,
             shape=(model.nu,),
-            minval=0.7,
-            maxval=1.1,  # was 0.9, 1.1
+            minval=0.9,
+            maxval=1.1,
         )
         current_kp = model.actuator_gainprm[:, 0]
         actuator_gainprm = model.actuator_gainprm.at[:, 0].set(current_kp * factor)

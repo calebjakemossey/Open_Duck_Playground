@@ -25,7 +25,7 @@ def reward_imitation(
     w_ang_vel_z = 0.5
     w_joint_pos = 15.0
     w_joint_vel = 1.0e-3
-    w_contact = 1.3 # lifted its feet better with higher w_contact (3.0 was ok, maybe 2.0 is best)
+    w_contact = 1.0  # lifted its feet better with higher w_contact (3.0 was ok, maybe 2.0 is best)
 
     #  TODO : double check if the slices are correct
 
