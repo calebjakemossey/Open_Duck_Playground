@@ -32,3 +32,4 @@ Not sure how this will all transfer on the real robot, I can try with 0.5 action
 # CHECKPOINT
 8e9d0f173acec0991a2d91a3143dcb11b1cb7ac3
 - stable walk ! But no push recovery and shaking when zero command
+- I have to set the action scale to 0.7 during inference for better results
