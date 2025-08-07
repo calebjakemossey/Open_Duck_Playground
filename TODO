@@ -18,22 +18,19 @@ imu gravity + gyro instead of raw gyro = accelero
 - kp 16 (and new firmware identification values, not very different actually)
 
 
-## TO TEST : 
-
-- try mansin imitation weights again ?
-
 ## NOTES:
 - I can get away with not letting the policy control the head, but it tends to pitch the trunk down front in this case
 Not sure how this will all transfer on the real robot, I can try with 0.5 action scale too, and maybe go back to 0.25 to see ?
 
 
 - kp 16 seems promising ! Need to fine tune a good policy for this, but it behaves much better than before when reducing the kp !
-- 0.25 makes still the best behaved policies, 0.5 could work, but it shakes a lot right now
-- Even with kp 32, action scale 0.25 and dof vel scale 0.05, I can't train a very stable policy on the new branch. 
-  - TODO list changes
-
 - going back to RAW imu seems to improve already ... (early checkpoint)
 
-## octuple check sim2real ? 
-- Replay a walking move in the air, log and look at the curves, compare with mujoco simulation
-- 
+- I have a lot of "static shaking", probably due to over reaction of the policy. find a way to fix that
+- It also tends to fall backwards when standing still, and tries to make small steps to catch itself
+
+# CHECKPOINT
+6ccf41c312600625465acb42d1e085684dcaf799
+- works pretty well, especially relatively early checkpoint
+  - later checkpoints, tends to fall backwards and shake
+- head is a little weird
