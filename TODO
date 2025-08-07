@@ -30,7 +30,5 @@ Not sure how this will all transfer on the real robot, I can try with 0.5 action
 - It also tends to fall backwards when standing still, and tries to make small steps to catch itself
 
 # CHECKPOINT
-6ccf41c312600625465acb42d1e085684dcaf799
-- works pretty well, especially relatively early checkpoint
-  - later checkpoints, tends to fall backwards and shake
-- head is a little weird
+8e9d0f173acec0991a2d91a3143dcb11b1cb7ac3
+- stable walk ! But no push recovery and shaking when zero command
