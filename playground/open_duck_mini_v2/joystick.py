@@ -325,7 +325,8 @@ class Joystick(open_duck_mini_v2_base.OpenDuckMiniV2Env):
     def step(self, state: mjx_env.State, action: jax.Array) -> mjx_env.State:
 
         if USE_IMITATION_REWARD:
-            state.info["imitation_i"] += 1 * jp.linalg.norm(state.info["command"][:3]) != 0
+            state.info["imitation_i"] += 1
+            state.info["imitation_i"] *= jp.linalg.norm(state.info["command"][:3]) != 0
 
             state.info["imitation_i"] = (
                 state.info["imitation_i"] % self.PRM.nb_steps_in_period
