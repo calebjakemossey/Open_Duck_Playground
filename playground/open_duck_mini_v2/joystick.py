@@ -387,13 +387,13 @@ class Joystick(open_duck_mini_v2_base.OpenDuckMiniV2Env):
             )
 
         if MASK_HEAD:
-            # motor_targets = motor_targets.at[5:9].set(
-            #     jp.zeros(4)
-            # )
-            # or set values from command
             motor_targets = motor_targets.at[5:9].set(
-                state.info["command"][3:]
-            ) 
+                jp.zeros(4)
+            )
+            # or set values from command
+            # motor_targets = motor_targets.at[5:9].set(
+            #     state.info["command"][3:]
+            # ) 
 
         # motor_targets.at[5:9].set(state.info["command"][3:])  # head joints
         data = mjx_env.step(self.mjx_model, state.data, motor_targets, self.n_substeps)
