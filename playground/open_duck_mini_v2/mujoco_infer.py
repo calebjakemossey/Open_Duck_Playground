@@ -249,12 +249,12 @@ class MjInfer(MJInferBase):
 
                             self.prev_motor_targets = self.motor_targets.copy()
 
-                        # head_targets = self.commands[3:]
+                        head_targets = self.commands[3:]
                         # head_targets = [0.3, -0.3, 0.0, 0]
-                        # self.motor_targets[5:9] += head_targets
+                        self.motor_targets[5:9] = head_targets
 
-                        if MASK_HEAD:
-                            self.motor_targets[5:9] = np.zeros(4)
+                        # if MASK_HEAD:
+                        #     self.motor_targets[5:9] = np.zeros(4)
 
                         self.data.ctrl = self.motor_targets.copy()
 

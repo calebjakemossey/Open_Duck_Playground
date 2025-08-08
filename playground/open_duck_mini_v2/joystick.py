@@ -81,7 +81,7 @@ def default_config() -> config_dict.ConfigDict:
                 tracking_lin_vel=2.5,
                 tracking_ang_vel=6.0,
                 torques=-1.0e-3,
-                action_rate=-1.5,  # was -2.0, made stable policy
+                action_rate=-2.0,  # was -2.0, made stable policy
                 stand_still=0.0,  # was -1.0 TODO try to relax this a bit ?
                 alive=20.0,
                 imitation=1.0
@@ -164,25 +164,6 @@ class Joystick(open_duck_mini_v2_base.OpenDuckMiniV2Env):
             )
         self._foot_linvel_sensor_adr = jp.array(foot_linvel_sensor_adr)
 
-        # # noise in the simu?
-        # qpos_noise_scale = np.zeros(self._actuators)
-
-        # hip_ids = [
-        #     idx for idx, j in enumerate(constants.JOINTS_ORDER_NO_HEAD) if "_hip" in j
-        # ]
-        # knee_ids = [
-        #     idx for idx, j in enumerate(constants.JOINTS_ORDER_NO_HEAD) if "_knee" in j
-        # ]
-        # ankle_ids = [
-        #     idx for idx, j in enumerate(constants.JOINTS_ORDER_NO_HEAD) if "_ankle" in j
-        # ]
-
-        # qpos_noise_scale[hip_ids] = self._config.noise_config.scales.hip_pos
-        # qpos_noise_scale[knee_ids] = self._config.noise_config.scales.knee_pos
-        # qpos_noise_scale[ankle_ids] = self._config.noise_config.scales.ankle_pos
-        # # qpos_noise_scale[faa_ids] = self._config.noise_config.scales.faa_pos
-
-        # self._qpos_noise_scale = jp.array(qpos_noise_scale)
         if MASK_HEAD:
             self._qpos_noise_scale = (
                 jp.ones(self._actuators - 4) * self._config.noise_config.scales.pos
@@ -192,13 +173,8 @@ class Joystick(open_duck_mini_v2_base.OpenDuckMiniV2Env):
                 jp.ones(self._actuators) * self._config.noise_config.scales.pos
             )
 
-        # self.action_filter = LowPassActionFilter(
-        #     1 / self._config.ctrl_dt, cutoff_frequency=37.5
-        # )
-
     def reset(self, rng: jax.Array) -> mjx_env.State:
         qpos = self._init_q  # the complete qpos
-        # print(f'DEBUG0 init qpos: {qpos}')
         qvel = jp.zeros(self.mjx_model.nv)
 
         # init position/orientation in environment
