@@ -35,9 +35,11 @@ Not sure how this will all transfer on the real robot, I can try with 0.5 action
 - I'm trying to fix the no reaction to pushes right now
   - Maybe we just push too much, so it just learns to ignore it (trying with lower push magnitude)
 
+
 # TO TEST
 (when I mean work, i mean it transfers)
-- action rate penalty at -2.0 works, -1.5 works too, will try to reduce it to -1.0
+- action rate penalty at -2.0 works, -1.5 works too, will try to reduce it to -0.5
+  - Hmm actually even with -1.5 there is a very high frequency vibration in the motors, it's worse at 0.5 and nonexistent at 2.0 (and with BEST_ONNX_2)
 - increase dof vel scale progressively
 - 
 
