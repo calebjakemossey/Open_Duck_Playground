@@ -35,6 +35,13 @@ Not sure how this will all transfer on the real robot, I can try with 0.5 action
 - I'm trying to fix the no reaction to pushes right now
   - Maybe we just push too much, so it just learns to ignore it (trying with lower push magnitude)
 
+I changed that, it seemed to had an effect on the reward ? I should check ...
+```python
+# hip_pos=0.03,  # rad, for each hip joint
+# knee_pos=0.05,  # rad, for each knee joint
+# ankle_pos=0.08,  # rad, for each ankle joint
+pos=0.05,  # rad, for each joint
+```
 
 # TO TEST
 (when I mean work, i mean it transfers)
