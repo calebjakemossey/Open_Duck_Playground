@@ -1,27 +1,21 @@
 NEW IDEAS
 
-## THIS RUN:
-action scale 0.25
-dof vel scale 0.1
-no stand still penalty (transition manually)
-push more frequently
-imu gravity + gyro instead of raw gyro = accelero
-
-- generate more reference motion
-  - increased walk freq a bit, tuned ranges better, com 1cm higher
-    - Maybe too fast now
-    - reduced it quite a lot
-
-- increase feet contact sub reward -> cool
-- head cost -> maybe increase it ? or another way of taming the head ?
-  - Maybe now I can get away with not letting the policy control the head ?
-- kp 16 (and new firmware identification values, not very different actually)
+# Overall :
+- action scale 0.25 -> 1
+- play with dof vel scale
+- no stand still penalty, no sample zero command, always walking 
+- head mask
+- same pos noise ? (checking the impact)
+- new ref data
+- kp 16
+- imitation rew -> contact rew 1.0 -> 1.5
+- action_rate penalty -> 2.0 -> very important for transfer with action scale 1
+- (at inference time on the robot, need to reduce action_scale)
 
 
 ## NOTES:
 - I can get away with not letting the policy control the head, but it tends to pitch the trunk down front in this case
 Not sure how this will all transfer on the real robot, I can try with 0.5 action scale too, and maybe go back to 0.25 to see ?
-
 
 - kp 16 seems promising ! Need to fine tune a good policy for this, but it behaves much better than before when reducing the kp !
 - going back to RAW imu seems to improve already ... (early checkpoint)
