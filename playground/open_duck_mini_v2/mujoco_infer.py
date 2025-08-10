@@ -27,7 +27,7 @@ class MjInfer(MJInferBase):
         self.linearVelocityScale = 1.0
         self.angularVelocityScale = 1.0
         self.dof_pos_scale = 1.0
-        self.dof_vel_scale = 0.1
+        self.dof_vel_scale = 1.0
         self.action_scale = 1.0
 
         self.action_filter = LowPassActionFilter(50, cutoff_frequency=37.5)
@@ -136,10 +136,10 @@ class MjInfer(MJInferBase):
             if keycode == 69:  # e
                 ang_vel = self.COMMANDS_RANGE_THETA[0]
             if keycode == 80:  # p
-                self.data.qvel[0] = 0.4
+                self.data.qvel[0] = 1.0
                 # self.phase_frequency_factor += 0.1
             if keycode == 59:  # m
-                self.data.qvel[0] = -0.4
+                self.data.qvel[0] = -1.0
                 # self.phase_frequency_factor -= 0.1
         else:
             neck_pitch = 0
