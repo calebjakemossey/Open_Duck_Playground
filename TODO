@@ -11,6 +11,7 @@ NEW IDEAS
 - imitation rew -> contact rew 1.0 -> 1.5
 - action_rate penalty -> 2.0 -> very important for transfer with action scale 1
 - (at inference time on the robot, need to reduce action_scale)
+- stand still cost back, with 0.1 bernouilly -> promising
 
 
 ## NOTES:
