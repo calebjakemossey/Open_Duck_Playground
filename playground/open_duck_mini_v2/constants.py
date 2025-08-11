@@ -47,34 +47,6 @@ RIGHT_FEET_GEOMS = [
     "right_foot_bottom_tpu",
 ]
 
-HIP_JOINT_NAMES = [
-    "left_hip_yaw",
-    "left_hip_roll",
-    "left_hip_pitch",
-    "right_hip_yaw",
-    "right_hip_roll",
-    "right_hip_pitch",
-]
-
-KNEE_JOINT_NAMES = [
-    "left_knee",
-    "right_knee",
-]
-
-# There should be a way to get that from the mjModel...
-JOINTS_ORDER_NO_HEAD = [
-    "left_hip_yaw",
-    "left_hip_roll",
-    "left_hip_pitch",
-    "left_knee",
-    "left_ankle",
-    "right_hip_yaw",
-    "right_hip_roll",
-    "right_hip_pitch",
-    "right_knee",
-    "right_ankle",
-]
-
 FEET_GEOMS = LEFT_FEET_GEOMS + RIGHT_FEET_GEOMS
 
 FEET_POS_SENSOR = [f"{site}_pos" for site in FEET_SITES]

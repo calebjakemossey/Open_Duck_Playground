@@ -15,13 +15,9 @@ USE_MOTOR_SPEED_LIMITS = True
 
 
 class MjInfer(MJInferBase):
-    def __init__(
-        self, model_path: str, reference_data: str, onnx_model_path: str, standing: bool
-    ):
+    def __init__(self, model_path: str, reference_data: str, onnx_model_path: str):
         super().__init__(model_path)
-
-        self.standing = standing
-        self.head_control_mode = self.standing
+        self.head_control_mode = False
 
         # Params
         self.linearVelocityScale = 1.0
@@ -32,8 +28,7 @@ class MjInfer(MJInferBase):
 
         self.action_filter = LowPassActionFilter(50, cutoff_frequency=37.5)
 
-        if not self.standing:
-            self.PRM = PolyReferenceMotion(reference_data)
+        self.PRM = PolyReferenceMotion(reference_data)
 
         self.policy = OnnxInfer(onnx_model_path, awd=True)
 
@@ -71,21 +66,16 @@ class MjInfer(MJInferBase):
     ):
         gyro = self.get_gyro(data)
         accelerometer = self.get_accelerometer(data)
-        accelerometer[0] += 1.3
 
         joint_angles = self.get_actuator_joints_qpos(data.qpos)
         joint_vel = self.get_actuator_joints_qvel(data.qvel)
 
         contacts = self.get_feet_contacts(data)
 
-        # if not self.standing:
-        # ref = self.PRM.get_reference_motion(*command[:3], self.imitation_i)
-
         obs = np.concatenate(
             [
                 gyro,
                 accelerometer,
-                # gravity,
                 command,
                 joint_angles - self.default_actuator,
                 joint_vel * self.dof_vel_scale,
@@ -94,8 +84,6 @@ class MjInfer(MJInferBase):
                 self.last_last_last_action,
                 self.motor_targets,
                 contacts,
-                # ref if not self.standing else np.array([]),
-                # [self.imitation_i]
                 self.imitation_phase,
             ]
         )
@@ -164,7 +152,6 @@ class MjInfer(MJInferBase):
             ) as viewer:
                 counter = 0
                 while True:
-
                     step_start = time.time()
 
                     mujoco.mj_step(self.model, self.data)
@@ -172,29 +159,28 @@ class MjInfer(MJInferBase):
                     counter += 1
 
                     if counter % self.decimation == 0:
-                        if not self.standing:
-                            self.imitation_i += 1.0 * self.phase_frequency_factor
-                            self.imitation_i = (
-                                self.imitation_i % self.PRM.nb_steps_in_period
-                            )
-                            # print(self.PRM.nb_steps_in_period)
-                            # exit()
-                            self.imitation_phase = np.array(
-                                [
-                                    np.cos(
-                                        self.imitation_i
-                                        / self.PRM.nb_steps_in_period
-                                        * 2
-                                        * np.pi
-                                    ),
-                                    np.sin(
-                                        self.imitation_i
-                                        / self.PRM.nb_steps_in_period
-                                        * 2
-                                        * np.pi
-                                    ),
-                                ]
-                            )
+                        self.imitation_i += 1.0 * self.phase_frequency_factor
+                        self.imitation_i = (
+                            self.imitation_i % self.PRM.nb_steps_in_period
+                        )
+                        # print(self.PRM.nb_steps_in_period)
+                        # exit()
+                        self.imitation_phase = np.array(
+                            [
+                                np.cos(
+                                    self.imitation_i
+                                    / self.PRM.nb_steps_in_period
+                                    * 2
+                                    * np.pi
+                                ),
+                                np.sin(
+                                    self.imitation_i
+                                    / self.PRM.nb_steps_in_period
+                                    * 2
+                                    * np.pi
+                                ),
+                            ]
+                        )
                         obs = self.get_obs(
                             self.data,
                             self.commands,
@@ -242,7 +228,6 @@ class MjInfer(MJInferBase):
 
 
 if __name__ == "__main__":
-
     parser = argparse.ArgumentParser()
     parser.add_argument("-o", "--onnx_model_path", type=str, required=True)
     # parser.add_argument("-k", action="store_true", default=False)
@@ -256,11 +241,8 @@ if __name__ == "__main__":
         type=str,
         default="playground/open_duck_mini_v2/xmls/scene_flat_terrain.xml",
     )
-    parser.add_argument("--standing", action="store_true", default=False)
 
     args = parser.parse_args()
 
-    mjinfer = MjInfer(
-        args.model_path, args.reference_data, args.onnx_model_path, args.standing
-    )
+    mjinfer = MjInfer(args.model_path, args.reference_data, args.onnx_model_path)
     mjinfer.run()
