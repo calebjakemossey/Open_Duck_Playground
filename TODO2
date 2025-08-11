@@ -1,0 +1,16 @@
+Ok, maybe I need to restart from scratch (from main) with :
+At each test, try on the real robot with a full charge
+
+- [] Check that I can reproduce the best2 policy on main
+- [] make develop branch 
+- [] Check that pos noise simplification has no/little impact -> merge develop
+  - Simplify all that can be that has no impact on the final policy -> merge develop
+- [] Check that I can learn a good policy with the new ref_motion (new home etc)-> merge develop
+- [] Check that I can do action scale 1.0, with increased action rate
+- [] Check that I can do kp16
+- [] Check that I can increase dof vel scale
+- [] Check that I can mask the head
+
+
+Future : 
+- [] Single policy vs 2 policies ? (stand, walk)
