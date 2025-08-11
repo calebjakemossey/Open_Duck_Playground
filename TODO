@@ -37,6 +37,8 @@ I changed that, it seemed to had an effect on the reward ? I should check ...
 pos=0.05,  # rad, for each joint
 ```
 
+- actually, it's probably not reacting at all to pushes from stand still now because it never happens during training
+
 # TO TEST
 (when I mean work, i mean it transfers)
 - action rate penalty at -2.0 works, -1.5 works too, will try to reduce it to -0.5
