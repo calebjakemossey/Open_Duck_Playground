@@ -12,3 +12,10 @@ checkpoints/
 .venv/
 .kaggle_dataset/
 disney_bdx_paper.pdf
+
+# Personal archive: allow best checkpoints (training runs still ignored above)
+!checkpoints/best/
+!checkpoints/best/*.onnx
+# Personal archive: allow the reference paper in docs/
+!docs/papers/
+!docs/papers/disney_bdx_paper.pdf
