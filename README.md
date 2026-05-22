@@ -96,3 +96,33 @@ Inspired from https://github.com/kscalelabs/mujoco_playground
 ```bash
 uv run playground/open_duck_mini_v2/runner.py --task flat_terrain_backlash --num_timesteps 300000000
 ```
+
+---
+
+## Local Modifications (Caleb's fork)
+
+This fork contains several modifications from the upstream `apirrone/Open_Duck_Playground`:
+
+### Model fixes
+- **Symmetric MJCF**: `open_duck_mini_v2.xml` re-exported from fixed OnShape CAD (37mm right-leg asymmetry corrected). Old files backed up in `xmls.backup/`
+- **Home keyframe**: `scene_flat_terrain.xml` updated with true-mirrored right leg values (both feet at identical height)
+- **Reference motions**: `polynomial_coefficients.pkl` regenerated from symmetric URDF with 210-motion grid (zero-entry bug in auto_gait.json fixed)
+
+### Training fixes
+- **tracking_sigma**: Changed from 0.01 to 0.1 in `joystick.py` (industry standard, prevents overshoot trap)
+- **get_gravity() bug**: Fixed sensor ID vs address bug in `mujoco_infer_base.py`
+- **Dependencies**: Pinned `playground==0.0.5` and `jax<0.7` in `pyproject.toml`
+
+### Analysis tools (`analysis/`)
+- `evaluate_policy.py` - comprehensive walking quality evaluator (v4)
+- `quick_walking_eval.py` - lightweight eval hooked into training callbacks
+- `find_best_checkpoint.py` - checkpoint selection by walking quality (not training reward)
+- `analyse_training.py` - TensorBoard event analysis
+- `debug_policy.py` - per-step velocity traces
+- `replay_reference.py` - visual playback of reference motions
+- `backfill_walking_metrics.py` - post-hoc walking metric addition to TF events
+
+### Training hook
+- `runner.py` modified to log `walking/HEADLINE` and per-scenario scores to TensorBoard after each checkpoint
+
+See `../docs/` for full documentation.

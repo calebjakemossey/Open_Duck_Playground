@@ -1,179 +1,146 @@
 
-import tensorflow as tf
-from tensorflow.keras import layers
-import tf2onnx
 import numpy as np
+import onnx
+from onnx import helper, TensorProto
+
 
 def export_onnx(
-    params, act_size, ppo_params, obs_size, output_path="ONNX.onnx"
+    params, act_size, ppo_params, obs_size, output_path="ONNX.onnx",
+    layer_norm=False,
 ):
     print(" === EXPORT ONNX === ")
 
-    # inference_fn = make_inference_fn(params, deterministic=True)
+    norm = params[0]
+    mean = np.array(norm.mean["state"] if hasattr(norm, 'mean') else norm["mean"]["state"], dtype=np.float32)
+    std = np.array(norm.std["state"] if hasattr(norm, 'std') else norm["std"]["state"], dtype=np.float32)
 
-    class MLP(tf.keras.Model):
-        def __init__(
-            self,
-            layer_sizes,
-            activation=tf.nn.relu,
-            kernel_init="lecun_uniform",
-            activate_final=False,
-            bias=True,
-            layer_norm=False,
-            mean_std=None,
-        ):
-            super().__init__()
+    p1 = params[1]
+    policy = getattr(p1, 'policy', p1)
+    jax_params = policy.get('params') if isinstance(policy, dict) else policy
+    if jax_params is None:
+        print("ERROR: Could not extract policy params")
+        return
 
-            self.layer_sizes = layer_sizes
-            self.activation = activation
-            self.kernel_init = kernel_init
-            self.activate_final = activate_final
-            self.bias = bias
-            self.layer_norm = layer_norm
+    hidden_sizes = list(ppo_params.network_factory.policy_hidden_layer_sizes)
+    final_size = act_size * 2
+    layer_sizes = hidden_sizes + [final_size]
 
-            if mean_std is not None:
-                self.mean = tf.Variable(mean_std[0], trainable=False, dtype=tf.float32)
-                self.std = tf.Variable(mean_std[1], trainable=False, dtype=tf.float32)
+    kernels = []
+    biases = []
+    ln_scales = []
+    ln_biases = []
+    for i in range(len(layer_sizes)):
+        layer_key = f"hidden_{i}"
+        k = np.array(jax_params[layer_key]["kernel"], dtype=np.float32)
+        b = np.array(jax_params[layer_key]["bias"], dtype=np.float32)
+        kernels.append(k)
+        biases.append(b)
+        print(f"  Layer {layer_key}: kernel {k.shape}, bias {b.shape}")
+
+        if layer_norm and i < len(layer_sizes) - 1:
+            ln_key = f"LayerNorm_{i}"
+            if ln_key in jax_params:
+                s = np.array(jax_params[ln_key]["scale"], dtype=np.float32)
+                lb = np.array(jax_params[ln_key]["bias"], dtype=np.float32)
+                ln_scales.append(s)
+                ln_biases.append(lb)
+                print(f"  LayerNorm {ln_key}: scale {s.shape}, bias {lb.shape}")
             else:
-                self.mean = None
-                self.std = None
+                ln_scales.append(None)
+                ln_biases.append(None)
 
-            self.mlp_block = tf.keras.Sequential(name="MLP_0")
-            for i, size in enumerate(self.layer_sizes):
-                dense_layer = layers.Dense(
-                    size,
-                    activation=self.activation,
-                    kernel_initializer=self.kernel_init,
-                    name=f"hidden_{i}",
-                    use_bias=self.bias,
-                )
-                self.mlp_block.add(dense_layer)
-                if self.layer_norm:
-                    self.mlp_block.add(
-                        layers.LayerNormalization(name=f"layer_norm_{i}")
-                    )
-            if not self.activate_final and self.mlp_block.layers:
-                if (
-                    hasattr(self.mlp_block.layers[-1], "activation")
-                    and self.mlp_block.layers[-1].activation is not None
-                ):
-                    self.mlp_block.layers[-1].activation = None
+    nodes = []
+    initializers = []
 
-            self.submodules = [self.mlp_block]
+    initializers.append(helper.make_tensor("mean", TensorProto.FLOAT, mean.shape, mean.flatten()))
+    initializers.append(helper.make_tensor("std", TensorProto.FLOAT, std.shape, std.flatten()))
 
-        def call(self, inputs):
-            if isinstance(inputs, list):
-                inputs = inputs[0]
-            if self.mean is not None and self.std is not None:
-                print(self.mean.shape, self.std.shape)
-                inputs = (inputs - self.mean) / self.std
-            logits = self.mlp_block(inputs)
-            loc, _ = tf.split(logits, 2, axis=-1)
-            return tf.tanh(loc)
+    nodes.append(helper.make_node("Sub", ["obs", "mean"], ["normed_sub"]))
+    nodes.append(helper.make_node("Div", ["normed_sub", "std"], ["normed"]))
 
-    def make_policy_network(
-        param_size,
-        mean_std,
-        hidden_layer_sizes=[256, 256],
-        activation=tf.nn.relu,
-        kernel_init="lecun_uniform",
-        layer_norm=False,
-    ):
-        policy_network = MLP(
-            layer_sizes=list(hidden_layer_sizes) + [param_size],
-            activation=activation,
-            kernel_init=kernel_init,
-            layer_norm=layer_norm,
-            mean_std=mean_std,
-        )
-        return policy_network
+    prev_output = "normed"
+    for i in range(len(layer_sizes)):
+        k_name = f"kernel_{i}"
+        b_name = f"bias_{i}"
+        mm_out = f"matmul_{i}"
+        add_out = f"dense_{i}"
 
-    mean = params[0].mean["state"]
-    std = params[0].std["state"]
+        initializers.append(helper.make_tensor(k_name, TensorProto.FLOAT, kernels[i].shape, kernels[i].flatten()))
+        initializers.append(helper.make_tensor(b_name, TensorProto.FLOAT, biases[i].shape, biases[i].flatten()))
 
-    # Convert mean/std jax arrays to tf tensors.
-    mean_std = (tf.convert_to_tensor(mean), tf.convert_to_tensor(std))
+        nodes.append(helper.make_node("MatMul", [prev_output, k_name], [mm_out]))
+        nodes.append(helper.make_node("Add", [mm_out, b_name], [add_out]))
 
-    tf_policy_network = make_policy_network(
-        param_size=act_size * 2,
-        mean_std=mean_std,
-        hidden_layer_sizes=ppo_params.network_factory.policy_hidden_layer_sizes,
-        activation=tf.nn.swish,
-    )
+        is_last = (i == len(layer_sizes) - 1)
 
-    example_input = tf.zeros((1, obs_size))
-    example_output = tf_policy_network(example_input)
-    print(example_output.shape)
+        if not is_last:
+            if layer_norm and i < len(ln_scales) and ln_scales[i] is not None:
+                ln_s_name = f"ln_scale_{i}"
+                ln_b_name = f"ln_bias_{i}"
+                ln_out = f"ln_{i}"
+                initializers.append(helper.make_tensor(ln_s_name, TensorProto.FLOAT, ln_scales[i].shape, ln_scales[i].flatten()))
+                initializers.append(helper.make_tensor(ln_b_name, TensorProto.FLOAT, ln_biases[i].shape, ln_biases[i].flatten()))
 
-    def transfer_weights(jax_params, tf_model):
-        """
-        Transfer weights from a JAX parameter dictionary to the TensorFlow model.
+                eps_name = f"ln_eps_{i}"
+                initializers.append(helper.make_tensor(eps_name, TensorProto.FLOAT, [], [1e-5]))
 
-        Parameters:
-        - jax_params: dict
-        Nested dictionary with structure {block_name: {layer_name: {params}}}.
-        For example:
-        {
-            'CNN_0': {
-            'Conv_0': {'kernel': np.ndarray},
-            'Conv_1': {'kernel': np.ndarray},
-            'Conv_2': {'kernel': np.ndarray},
-            },
-            'MLP_0': {
-            'hidden_0': {'kernel': np.ndarray, 'bias': np.ndarray},
-            'hidden_1': {'kernel': np.ndarray, 'bias': np.ndarray},
-            'hidden_2': {'kernel': np.ndarray, 'bias': np.ndarray},
-            }
-        }
+                mean_out = f"ln_mean_{i}"
+                nodes.append(helper.make_node("ReduceMean", [add_out], [mean_out], axes=[-1], keepdims=1))
 
-        - tf_model: tf.keras.Model
-        An instance of the adapted VisionMLP model containing named submodules and layers.
-        """
-        for layer_name, layer_params in jax_params.items():
-            try:
-                tf_layer = tf_model.get_layer("MLP_0").get_layer(name=layer_name)
-            except ValueError:
-                print(f"Layer {layer_name} not found in TensorFlow model.")
-                continue
-            if isinstance(tf_layer, tf.keras.layers.Dense):
-                kernel = np.array(layer_params["kernel"])
-                bias = np.array(layer_params["bias"])
-                print(
-                    f"Transferring Dense layer {layer_name}, kernel shape {kernel.shape}, bias shape {bias.shape}"
-                )
-                tf_layer.set_weights([kernel, bias])
+                centered = f"ln_centered_{i}"
+                nodes.append(helper.make_node("Sub", [add_out, mean_out], [centered]))
+
+                sq = f"ln_sq_{i}"
+                nodes.append(helper.make_node("Mul", [centered, centered], [sq]))
+
+                var_out = f"ln_var_{i}"
+                nodes.append(helper.make_node("ReduceMean", [sq], [var_out], axes=[-1], keepdims=1))
+
+                var_eps = f"ln_var_eps_{i}"
+                nodes.append(helper.make_node("Add", [var_out, eps_name], [var_eps]))
+
+                inv_std = f"ln_invstd_{i}"
+                nodes.append(helper.make_node("Sqrt", [var_eps], [f"ln_std_{i}"]))
+                nodes.append(helper.make_node("Div", [centered, f"ln_std_{i}"], [inv_std]))
+
+                scaled = f"ln_scaled_{i}"
+                nodes.append(helper.make_node("Mul", [inv_std, ln_s_name], [scaled]))
+                nodes.append(helper.make_node("Add", [scaled, ln_b_name], [ln_out]))
+
+                swish_in = ln_out
             else:
-                print(f"Unhandled layer type in {layer_name}: {type(tf_layer)}")
+                swish_in = add_out
 
-        print("Weights transferred successfully.")
+            sig_out = f"sigmoid_{i}"
+            swish_out = f"swish_{i}"
+            nodes.append(helper.make_node("Sigmoid", [swish_in], [sig_out]))
+            nodes.append(helper.make_node("Mul", [swish_in, sig_out], [swish_out]))
+            prev_output = swish_out
+        else:
+            prev_output = add_out
 
-    def extract_policy_params(p):
-        policy = getattr(p, 'policy', p)
-        return policy.get('params') if isinstance(policy, dict) else None
+    half = final_size // 2
+    nodes.append(helper.make_node("Split", [prev_output], ["loc", "scale_raw"], axis=-1, split=[half, half]))
+    nodes.append(helper.make_node("Tanh", ["loc"], ["continuous_actions"]))
 
-    transfer_weights(extract_policy_params(params[1]), tf_policy_network)
+    input_tensor = helper.make_tensor_value_info("obs", TensorProto.FLOAT, [1, obs_size])
+    output_tensor = helper.make_tensor_value_info("continuous_actions", TensorProto.FLOAT, [1, half])
 
-    # Example inputs for the model
-    test_input = [np.ones((1, obs_size), dtype=np.float32)]
+    graph = helper.make_graph(nodes, "policy", [input_tensor], [output_tensor], initializer=initializers)
+    model = helper.make_model(graph, opset_imports=[helper.make_opsetid("", 11)])
+    model.ir_version = 6
 
-    # Define the TensorFlow input signature
-    spec = [
-        tf.TensorSpec(shape=(1, obs_size), dtype=tf.float32, name="obs")
-    ]
+    onnx.checker.check_model(model)
+    onnx.save(model, output_path)
+    onnx.save(model, "ONNX.onnx")
 
-    tensorflow_pred = tf_policy_network(test_input)[0]
-    # Build the model by calling it with example data
-    print(f"Tensorflow prediction: {tensorflow_pred}")
+    test_input = np.ones((1, obs_size), dtype=np.float32)
+    try:
+        import onnxruntime as ort
+        sess = ort.InferenceSession(output_path, providers=["CPUExecutionProvider"])
+        result = sess.run(None, {"obs": test_input})
+        print(f"  ONNX prediction (verified): {result[0][0][:5]}...")
+    except ImportError:
+        print("  (onnxruntime not installed - skipping verification)")
 
-    tf_policy_network.output_names = ["continuous_actions"]
-
-    # opset 11 matches isaac lab.
-    model_proto, _ = tf2onnx.convert.from_keras(
-        tf_policy_network, input_signature=spec, opset=11, output_path=output_path
-    )
-
-    # For Antoine :)
-    model_proto, _ = tf2onnx.convert.from_keras(
-        tf_policy_network, input_signature=spec, opset=11, output_path="ONNX.onnx"
-    )
-    return
+    print(f"  Saved: {output_path}")

@@ -6,14 +6,16 @@ readme = "README.md"
 requires-python = ">=3.11"
 dependencies = [
     "framesviewer>=1.0.2",
-    "jax[cuda12]>=0.5.0",
-    "jaxlib>=0.5.0",
+    "jax[cuda12]>=0.5.0,<0.7",
+    "jaxlib>=0.5.0,<0.7",
     "jaxtyping>=0.2.38",
     "matplotlib>=3.10.0",
     "mediapy>=1.2.2",
     "onnxruntime>=1.20.1",
-    "playground>=0.0.3",
+    "playground==0.0.5",
     "pygame>=2.6.1",
+    "setuptools>=70.0,<81",
+    "tensorboard>=2.20.0",
     "tensorflow>=2.18.0",
     "tf2onnx>=1.16.1",
 ]

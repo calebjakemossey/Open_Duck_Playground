@@ -15,7 +15,7 @@ def reward_tracking_lin_vel(
 ) -> jax.Array:
     # lin_vel_error = jp.sum(jp.square(commands[:2] - local_vel[:2]))
     # return jp.nan_to_num(jp.exp(-lin_vel_error / self._config.reward_config.tracking_sigma))
-    y_tol = 0.1
+    y_tol = 0.02  # bug fix: was 0.1, wider than the strafe command range so strafe was unrewarded
     error_x = jp.square(commands[0] - local_vel[0])
     error_y = jp.clip(jp.abs(local_vel[1] - commands[1]) - y_tol, 0.0, None)
     lin_vel_error = error_x + jp.square(error_y)
@@ -79,6 +79,11 @@ def cost_action_rate(act: jax.Array, last_act: jax.Array) -> jax.Array:
     return c1
 
 
+def cost_jerk(act: jax.Array, last_act: jax.Array, last_last_act: jax.Array) -> jax.Array:
+    jerk = act - 2 * last_act + last_last_act
+    return jp.nan_to_num(jp.sum(jp.square(jerk)))
+
+
 # Other rewards.
 
 
@@ -117,12 +122,80 @@ def cost_stand_still(
     return jp.nan_to_num(pose_cost + vel_cost) * (cmd_norm < 0.01)
 
 
+def reward_stand_contact(
+    contact: jax.Array,
+    commands: jax.Array,
+) -> jax.Array:
+    cmd_norm = jp.linalg.norm(commands[:3])
+    both_feet_down = contact[0] & contact[1]
+    return both_feet_down.astype(jp.float32) * (cmd_norm < 0.01)
+
+
 def cost_termination(done: jax.Array) -> jax.Array:
     return done
 
 
 def reward_alive() -> jax.Array:
     return jp.array(1.0)
+
+
+def reward_capture_point(
+    com_xy: jax.Array,
+    com_vel_xy: jax.Array,
+    foot_pos_left: jax.Array,
+    foot_pos_right: jax.Array,
+    com_height: float,
+    sigma: float = 0.04,
+) -> jax.Array:
+    omega = jp.sqrt(9.81 / jp.maximum(com_height, 0.05))
+    cp = com_xy + com_vel_xy / omega
+
+    support_centre = (foot_pos_left[:2] + foot_pos_right[:2]) / 2.0
+    d_cp = jp.linalg.norm(cp - support_centre)
+    return jp.nan_to_num(jp.exp(-(d_cp ** 2) / (sigma ** 2)))
+
+
+def reward_velocity_damping(
+    com_vel_xy: jax.Array,
+    sigma: float = 0.3,
+) -> jax.Array:
+    return jp.nan_to_num(jp.exp(-(jp.sum(com_vel_xy ** 2)) / (sigma ** 2)))
+
+
+def reward_recovery_survival(
+    steps_since_push: jax.Array,
+    push_active: jax.Array,
+    survival_window: int = 50,
+) -> jax.Array:
+    in_window = (steps_since_push > 0) & (steps_since_push <= survival_window)
+    progress = jp.clip(steps_since_push / survival_window, 0.0, 1.0)
+    return in_window.astype(jp.float32) * progress
+
+
+def reward_foot_placement(
+    com_xy: jax.Array,
+    com_vel_xy: jax.Array,
+    foot_pos: jax.Array,
+    com_height: float,
+    is_touchdown: jax.Array,
+    sigma: float = 0.06,
+) -> jax.Array:
+    omega = jp.sqrt(9.81 / jp.maximum(com_height, 0.05))
+    cp = com_xy + com_vel_xy / omega
+    d = jp.linalg.norm(foot_pos[:2] - cp)
+    return jp.nan_to_num(jp.exp(-(d ** 2) / (sigma ** 2))) * is_touchdown
+
+
+def reward_foot_direction(
+    foot_pos_xy: jax.Array,
+    prev_foot_pos_xy: jax.Array,
+    com_vel_xy: jax.Array,
+    is_touchdown: jax.Array,
+) -> jax.Array:
+    foot_delta = foot_pos_xy - prev_foot_pos_xy
+    vel_norm = jp.linalg.norm(com_vel_xy) + 1e-6
+    alignment = jp.dot(foot_delta, com_vel_xy) / vel_norm
+    return jp.nan_to_num(jp.clip(alignment, 0.0, None)) * is_touchdown
 
 
 # Pose-related rewards.

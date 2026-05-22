@@ -13,6 +13,10 @@ from tensorboardX import SummaryWriter
 
 import os
 from brax.training.agents.ppo import networks as ppo_networks, train as ppo
+from brax.training import networks as brax_networks
+from brax.training import distribution as brax_dist
+from brax.training import types as brax_types
+from flax import linen
 from mujoco_playground import wrapper
 from mujoco_playground.config import locomotion_params
 from orbax import checkpoint as ocp
@@ -47,10 +51,11 @@ class BaseRunner(ABC):
         jax.config.update("jax_compilation_cache_dir", ".tmp/jax_cache")
         jax.config.update("jax_persistent_cache_min_entry_size_bytes", -1)
         jax.config.update("jax_persistent_cache_min_compile_time_secs", 0)
-        jax.config.update(
-            "jax_persistent_cache_enable_xla_caches",
-            "xla_gpu_per_fusion_autotune_cache_dir",
-        )
+        if jax.default_backend() == "gpu":
+            jax.config.update(
+                "jax_persistent_cache_enable_xla_caches",
+                "xla_gpu_per_fusion_autotune_cache_dir",
+            )
         os.environ["JAX_COMPILATION_CACHE_DIR"] = ".tmp/jax_cache"
 
     def progress_callback(self, num_steps: int, metrics: dict) -> None:
@@ -80,7 +85,72 @@ class BaseRunner(ABC):
             self.action_size,
             self.ppo_params,
             self.obs_size,  # may not work
-            output_path=onnx_export_path
+            output_path=onnx_export_path,
+            layer_norm=getattr(self.args, 'layer_norm', False),
+        )
+
+        # Policy quality eval - logs to TB so the dashboard shows actual capability
+        # rather than the noisy alive-dominated training reward
+        try:
+            import sys as _sys, os as _os
+            _proj_root = _os.path.abspath(_os.path.join(_os.path.dirname(__file__), "..", ".."))
+            if _proj_root not in _sys.path:
+                _sys.path.insert(0, _proj_root)
+
+            env_name = getattr(self.args, 'env', 'joystick')
+            if env_name == 'standing':
+                from analysis.quick_standing_eval import assess_standing
+                eval_metrics = assess_standing(onnx_export_path)
+                print(f"  Standing HEADLINE: {eval_metrics.get('standing/HEADLINE', 0):.3f}  "
+                      f"stillness: {eval_metrics.get('standing/stillness_score', 0):.3f}  "
+                      f"push: {eval_metrics.get('standing/push_score', 0):.3f}")
+            else:
+                from analysis.quick_walking_eval import assess_walking
+                eval_metrics = assess_walking(onnx_export_path)
+                print(f"  Walking HEADLINE: {eval_metrics.get('walking/HEADLINE', 0):.3f}  "
+                      f"walking: {eval_metrics.get('walking/WALKING_SCORE', 0):.3f}  "
+                      f"responsive: {eval_metrics.get('walking/responsiveness_avg', 0):.3f}")
+
+            for k, v in eval_metrics.items():
+                self.writer.add_scalar(k, float(v), current_step)
+        except Exception as exc:
+            print(f"  [eval skipped: {exc}]")
+
+    @staticmethod
+    def _make_ppo_networks_with_layernorm(
+        observation_size,
+        action_size,
+        preprocess_observations_fn=brax_types.identity_observation_preprocessor,
+        policy_hidden_layer_sizes=(512, 256, 128),
+        value_hidden_layer_sizes=(512, 256, 128),
+        activation=linen.swish,
+        policy_obs_key='state',
+        value_obs_key='state',
+        **kwargs,
+    ):
+        parametric_action_distribution = brax_dist.NormalTanhDistribution(
+            event_size=action_size
+        )
+        policy_network = brax_networks.make_policy_network(
+            parametric_action_distribution.param_size,
+            observation_size,
+            preprocess_observations_fn=preprocess_observations_fn,
+            hidden_layer_sizes=policy_hidden_layer_sizes,
+            activation=activation,
+            layer_norm=True,
+            obs_key=policy_obs_key,
+        )
+        value_network = brax_networks.make_value_network(
+            observation_size,
+            preprocess_observations_fn=preprocess_observations_fn,
+            hidden_layer_sizes=value_hidden_layer_sizes,
+            activation=activation,
+            obs_key=value_obs_key,
+        )
+        return ppo_networks.PPONetworks(
+            policy_network=policy_network,
+            value_network=value_network,
+            parametric_action_distribution=parametric_action_distribution,
         )
 
     def train(self) -> None:
@@ -89,16 +159,61 @@ class BaseRunner(ABC):
         )  # TODO
         self.ppo_training_params = dict(self.ppo_params)
         # self.ppo_training_params["num_timesteps"] = 150000000 * 20
-        
+
+        use_layer_norm = getattr(self.args, 'layer_norm', False)
+        policy_layers = getattr(self.args, 'policy_layers', None)
+        activation_name = getattr(self.args, 'activation', 'swish')
+        activation_fn = linen.elu if activation_name == 'elu' else linen.swish
+
+        layer_overrides = {}
+        if policy_layers:
+            layer_overrides['policy_hidden_layer_sizes'] = tuple(policy_layers)
+            layer_overrides['value_hidden_layer_sizes'] = tuple(policy_layers)
 
         if "network_factory" in self.ppo_params:
-            network_factory = functools.partial(
-                ppo_networks.make_ppo_networks, **self.ppo_params.network_factory
-            )
+            if use_layer_norm:
+                nf_kwargs = dict(self.ppo_params.network_factory)
+                nf_kwargs.update(layer_overrides)
+                nf_kwargs['activation'] = activation_fn
+                network_factory = functools.partial(
+                    self._make_ppo_networks_with_layernorm, **nf_kwargs
+                )
+            else:
+                nf_kwargs = dict(self.ppo_params.network_factory)
+                nf_kwargs.update(layer_overrides)
+                nf_kwargs['activation'] = activation_fn
+                network_factory = functools.partial(
+                    ppo_networks.make_ppo_networks, **nf_kwargs
+                )
             del self.ppo_training_params["network_factory"]
         else:
-            network_factory = ppo_networks.make_ppo_networks
+            if use_layer_norm:
+                network_factory = functools.partial(
+                    self._make_ppo_networks_with_layernorm,
+                    activation=activation_fn, **layer_overrides
+                )
+            else:
+                network_factory = functools.partial(
+                    ppo_networks.make_ppo_networks,
+                    activation=activation_fn, **layer_overrides
+                ) if layer_overrides or activation_name != 'swish' else ppo_networks.make_ppo_networks
+
+        if use_layer_norm:
+            print("*** LayerNorm ENABLED on policy network ***")
+        if policy_layers:
+            print(f"*** Network layers: {tuple(policy_layers)} ***")
+        if activation_name != 'swish':
+            print(f"*** Activation: {activation_name} ***")
+
+        use_adaptive_kl = getattr(self.args, 'adaptive_kl', False)
+        if use_adaptive_kl:
+            from brax.training.agents.ppo import optimizer as ppo_optimizer
+            self.ppo_training_params['learning_rate_schedule'] = ppo_optimizer.LRSchedule.ADAPTIVE_KL
+            self.ppo_training_params['desired_kl'] = 0.01
+            print("*** Adaptive KL LR schedule ENABLED (desired_kl=0.01) ***")
         self.ppo_training_params["num_timesteps"] = self.num_timesteps
+        self.ppo_training_params["clipping_epsilon_value"] = 0.2
+
         print(f"PPO params: {self.ppo_training_params}")
 
         train_fn = functools.partial(

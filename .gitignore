@@ -8,4 +8,7 @@ mujoco_saved_obs.pkl
 checkpoints/
 .tmp/
 *.onnx
-*.TXT
+*.TXTwandb/
+.venv/
+.kaggle_dataset/
+disney_bdx_paper.pdf

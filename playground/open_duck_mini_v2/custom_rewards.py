@@ -27,47 +27,40 @@ def reward_imitation(
     w_joint_vel = 1.0e-3
     w_contact = 1.0
 
-    #  TODO : double check if the slices are correct
-    linear_vel_slice_start = 34
-    linear_vel_slice_end = 37
-
-    angular_vel_slice_start = 37
-    angular_vel_slice_end = 40
-
+    # Polynomial reference layout (14 joints, antennas merged - new symmetric URDF):
+    # [0:14]   joint_pos    (5 left leg + 4 head + 5 right leg)
+    # [14:28]  joint_vel
+    # [28:30]  foot_contacts (left, right)
+    # [30:33]  base linear_vel (xyz)
+    # [33:36]  base angular_vel (xyz)
+    # NB: root_quat is NOT in the polynomial output - torso_orientation_rew is unused.
     joint_pos_slice_start = 0
-    joint_pos_slice_end = 16
+    joint_pos_slice_end = 14
 
-    joint_vels_slice_start = 16
-    joint_vels_slice_end = 32
+    joint_vels_slice_start = 14
+    joint_vels_slice_end = 28
 
-    # root_pos_slice_start = 0
-    # root_pos_slice_end = 3
+    foot_contacts_slice_start = 28
+    foot_contacts_slice_end = 30
 
-    root_quat_slice_start = 3
-    root_quat_slice_end = 7
+    linear_vel_slice_start = 30
+    linear_vel_slice_end = 33
 
-    # left_toe_pos_slice_start = 23
-    # left_toe_pos_slice_end = 26
+    angular_vel_slice_start = 33
+    angular_vel_slice_end = 36
 
-    # right_toe_pos_slice_start = 26
-    # right_toe_pos_slice_end = 29
-
-    foot_contacts_slice_start = 32
-    foot_contacts_slice_end = 34
+    # Quaternion slice is dead - not in polynomial. Kept for code below; produces zeros.
+    root_quat_slice_start = 0
+    root_quat_slice_end = 0
 
     # ref_base_pos = reference_frame[root_pos_slice_start:root_pos_slice_end]
     # base_pos = qpos[:3]
 
-    ref_base_orientation_quat = reference_frame[
-        root_quat_slice_start:root_quat_slice_end
-    ]
-    ref_base_orientation_quat = ref_base_orientation_quat / jp.linalg.norm(
-        ref_base_orientation_quat
-    )  # normalize the quat
+    # Quaternion not present in current polynomial layout; use identity quat as no-op
+    # (torso_orientation_rew is unused in the final reward sum anyway).
+    ref_base_orientation_quat = jp.array([1.0, 0.0, 0.0, 0.0])
     base_orientation = base_qpos[3:7]
-    base_orientation = base_orientation / jp.linalg.norm(
-        base_orientation
-    )  # normalize the quat
+    base_orientation = base_orientation / jp.linalg.norm(base_orientation)
 
     ref_base_lin_vel = reference_frame[linear_vel_slice_start:linear_vel_slice_end]
     base_lin_vel = base_qvel[:3]
@@ -76,15 +69,13 @@ def reward_imitation(
     base_ang_vel = base_qvel[3:6]
 
     ref_joint_pos = reference_frame[joint_pos_slice_start:joint_pos_slice_end]
-    # remove neck head and antennas
-    ref_joint_pos = jp.concatenate([ref_joint_pos[:5], ref_joint_pos[11:]])
-    # joint_pos = joints_qpos
+    # Joint layout: [0-4] left leg, [5-8] head, [9-13] right leg.
+    # Drop head joints for the imitation comparison (policy + reference both 14 dims).
+    ref_joint_pos = jp.concatenate([ref_joint_pos[:5], ref_joint_pos[9:]])
     joint_pos = jp.concatenate([joints_qpos[:5], joints_qpos[9:]])
 
     ref_joint_vels = reference_frame[joint_vels_slice_start:joint_vels_slice_end]
-    # remove neck head and antennas
-    ref_joint_vels = jp.concatenate([ref_joint_vels[:5], ref_joint_vels[11:]])
-    # joint_vel = joints_qvel
+    ref_joint_vels = jp.concatenate([ref_joint_vels[:5], ref_joint_vels[9:]])
     joint_vel = jp.concatenate([joints_qvel[:5], joints_qvel[9:]])
 
     # ref_left_toe_pos = reference_frame[left_toe_pos_slice_start:left_toe_pos_slice_end]

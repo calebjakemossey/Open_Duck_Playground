@@ -36,7 +36,10 @@ from playground.common.rewards import (
     reward_tracking_ang_vel,
     cost_torques,
     cost_action_rate,
-    cost_stand_still,
+    cost_jerk,
+    cost_orientation,
+    cost_ang_vel_xy,
+    cost_lin_vel_z,
     reward_alive,
 )
 from playground.open_duck_mini_v2.custom_rewards import reward_imitation
@@ -77,19 +80,22 @@ def default_config() -> config_dict.ConfigDict:
         reward_config=config_dict.create(
             scales=config_dict.create(
                 tracking_lin_vel=2.5,
-                tracking_ang_vel=6.0,
+                tracking_ang_vel=2.5,
                 torques=-1.0e-3,
-                action_rate=-0.5,  # was -1.5
-                stand_still=-0.2,  # was -1.0 TODO try to relax this a bit ?
-                alive=20.0,
-                imitation=1.0,
+                action_rate=-1.5,
+                action_accel=-0.45,
+                orientation=-5.0,
+                ang_vel_xy=-0.05,
+                lin_vel_z=-2.0,
+                alive=5.0,
+                imitation=15.0,
             ),
-            tracking_sigma=0.01,  # was working at 0.01
+            tracking_sigma=0.25,
         ),
         push_config=config_dict.create(
             enable=True,
-            interval_range=[5.0, 10.0],
-            magnitude_range=[0.1, 1.0],
+            interval_range=[3.0, 8.0],
+            magnitude_range=[0.5, 2.0],
         ),
         lin_vel_x=[-0.15, 0.15],
         lin_vel_y=[-0.2, 0.2],
@@ -558,37 +564,24 @@ class Joystick(open_duck_mini_v2_base.OpenDuckMiniV2Env):
             * self._config.noise_config.scales.joint_vel
         )
 
-        linvel = self.get_local_linvel(data)
-        # info["rng"], noise_rng = jax.random.split(info["rng"])
-        # noisy_linvel = (
-        #     linvel
-        #     + (2 * jax.random.uniform(noise_rng, shape=linvel.shape) - 1)
-        #     * self._config.noise_config.level
-        #     * self._config.noise_config.scales.linvel
-        # )
-
         state = jp.hstack(
             [
-                # noisy_linvel,  # 3
-                # noisy_gyro,  # 3
-                # noisy_gravity,  # 3
                 noisy_gyro,  # 3
                 noisy_accelerometer,  # 3
-                info["command"],  # 3
-                noisy_joint_angles - self._default_actuator,  # 10
-                noisy_joint_vel * self._config.dof_vel_scale,  # 10
-                info["last_act"],  # 10
-                info["last_last_act"],  # 10
-                info["last_last_last_act"],  # 10
-                info["motor_targets"],  # 10
+                info["command"],  # 7
+                noisy_joint_angles - self._default_actuator,  # 14
+                noisy_joint_vel * self._config.dof_vel_scale,  # 14
+                info["last_act"],  # 14
+                info["last_last_act"],  # 14
+                info["last_last_last_act"],  # 14
+                info["motor_targets"],  # 14
                 contact,  # 2
-                # info["current_reference_motion"],
-                # info["imitation_i"],
-                info["imitation_phase"],
+                info["imitation_phase"],  # 2
             ]
         )
 
         accelerometer = self.get_accelerometer(data)
+        linvel = self.get_local_linvel(data)
         global_angvel = self.get_global_angvel(data)
         feet_vel = data.sensordata[self._foot_linvel_sensor_adr].ravel()
         root_height = data.qpos[self._floating_base_qpos_addr + 2]
@@ -642,27 +635,22 @@ class Joystick(open_duck_mini_v2_base.OpenDuckMiniV2Env):
                 self.get_gyro(data),
                 self._config.reward_config.tracking_sigma,
             ),
-            # "orientation": cost_orientation(self.get_gravity(data)),
+            "orientation": cost_orientation(self.get_gravity(data)),
+            "ang_vel_xy": cost_ang_vel_xy(self.get_global_angvel(data)),
+            "lin_vel_z": cost_lin_vel_z(self.get_global_linvel(data)),
             "torques": cost_torques(data.actuator_force),
             "action_rate": cost_action_rate(action, info["last_act"]),
+            "action_accel": cost_jerk(action, info["last_act"], info["last_last_act"]),
             "alive": reward_alive(),
-            "imitation": reward_imitation(  # FIXME, this reward is so adhoc...
-                self.get_floating_base_qpos(data.qpos),  # floating base qpos
-                self.get_floating_base_qvel(data.qvel),  # floating base qvel
+            "imitation": reward_imitation(
+                self.get_floating_base_qpos(data.qpos),
+                self.get_floating_base_qvel(data.qvel),
                 self.get_actuator_joints_qpos(data.qpos),
                 self.get_actuator_joints_qvel(data.qvel),
                 contact,
                 info["current_reference_motion"],
                 info["command"],
                 USE_IMITATION_REWARD,
-            ),
-            "stand_still": cost_stand_still(
-                # info["command"], data.qpos[7:], data.qvel[6:], self._default_pose
-                info["command"],
-                self.get_actuator_joints_qpos(data.qpos),
-                self.get_actuator_joints_qvel(data.qvel),
-                self._default_actuator,
-                ignore_head=False,
             ),
         }
 
@@ -707,19 +695,14 @@ class Joystick(open_duck_mini_v2_base.OpenDuckMiniV2Env):
             maxval=self._config.head_roll_range[1] * self._config.head_range_factor,
         )
 
-        # With 10% chance, set everything to zero.
-        return jp.where(
-            jax.random.bernoulli(rng4, p=0.1),
-            jp.zeros(7),
-            jp.hstack(
-                [
-                    lin_vel_x,
-                    lin_vel_y,
-                    ang_vel_yaw,
-                    neck_pitch,
-                    head_pitch,
-                    head_yaw,
-                    head_roll,
-                ]
-            ),
-        )
+        normal_cmd = jp.hstack([
+            lin_vel_x, lin_vel_y, ang_vel_yaw,
+            neck_pitch, head_pitch, head_yaw, head_roll,
+        ])
+        pure_turn_cmd = jp.hstack([
+            jp.float32(0.0), jp.float32(0.0), ang_vel_yaw,
+            neck_pitch, head_pitch, head_yaw, head_roll,
+        ])
+        selector = jax.random.uniform(rng4)
+        # 12% pure turn, 88% normal
+        return jp.where(selector < 0.12, pure_turn_cmd, normal_cmd)

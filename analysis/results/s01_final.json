@@ -1,0 +1,55 @@
+{
+  "forward_walk": {
+    "mean_action_rate": 0.017069,
+    "mean_jerk": 0.009708,
+    "hf_ratio": 0.1106,
+    "mean_survival_steps": 1000.0,
+    "survival_rate": 1.0,
+    "survival_std": 0.0
+  },
+  "backward_walk": {
+    "mean_action_rate": 0.010303,
+    "mean_jerk": 0.005759,
+    "hf_ratio": 0.0986,
+    "mean_survival_steps": 1000.0,
+    "survival_rate": 1.0,
+    "survival_std": 0.0
+  },
+  "lateral_walk": {
+    "mean_action_rate": 0.00892,
+    "mean_jerk": 0.00484,
+    "hf_ratio": 0.1104,
+    "mean_survival_steps": 1000.0,
+    "survival_rate": 1.0,
+    "survival_std": 0.0
+  },
+  "turning": {
+    "mean_action_rate": 0.054725,
+    "mean_jerk": 0.038593,
+    "hf_ratio": 0.1756,
+    "mean_survival_steps": 1000.0,
+    "survival_rate": 1.0,
+    "survival_std": 0.0
+  },
+  "standing": {
+    "mean_action_rate": 0.004388,
+    "mean_jerk": 0.002836,
+    "hf_ratio": 0.1227,
+    "mean_survival_steps": 1000.0,
+    "survival_rate": 1.0,
+    "survival_std": 0.0
+  },
+  "aggregate_locomotion": {
+    "mean_action_rate": 0.022754,
+    "mean_jerk": 0.014725,
+    "hf_ratio": 0.1238,
+    "mean_survival_steps": 1000.0,
+    "survival_rate": 1.0
+  },
+  "metadata": {
+    "onnx_path": "checkpoints/s01_combined_smoothness/2026_05_11_203746_151388160.onnx",
+    "model_path": "playground/open_duck_mini_v2/xmls/scene_flat_terrain.xml",
+    "num_episodes": 20,
+    "evaluation_time_seconds": 13.1
+  }
+}
